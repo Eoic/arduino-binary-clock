@@ -2,76 +2,96 @@
 const short DELAY = 0;
 
 // Buttons.
-const byte hoursBtnPin = 11;
-const byte minutesBtnPin = 12;
+const byte hoursBtnPin = 12;
+const byte minutesBtnPin = 13;
+
+// Timestamp for button down start.
 long buttonTimer = 0;
+
+// Time until button long press is registered.
 long longPressTime = 1000;
 
 // Button state flags.
 boolean longPressActive = false;
-boolean buttonActive = false;
+boolean hoursButtonDown = false;
+
+boolean hourUpdated = false;
+boolean minuteUpdated = false;
 
 // Time.
 byte hourOffset, minuteOffset;
 byte hours, minutes, seconds;
 
-void setup() {
+void setup()
+{
 
-  /*
+	/*
      PINS     [2;11]
-     Hours:   [2;6]
-     Minutes: [7;11]
+     Hours:   [2;5]
+     Minutes: [6;11]
      Buttons: [12;13]
   */
-  for(int i = 2; i <= 11; i++)
-    pinMode(i, OUTPUT);
 
-  pinMode(hoursBtnPin, INPUT);
-  pinMode(minutesBtnPin, INPUT);
+	for (int i = 2; i <= 11; i++)
+		pinMode(i, OUTPUT);
 
-  hourOffset = 0;
-  minuteOffset = 0;
+	pinMode(hoursBtnPin, INPUT);
+	pinMode(minutesBtnPin, INPUT);
 
-  Serial.begin(9600);
+	hourOffset = 0;
+	minuteOffset = 0;
 }
 
-void loop() {
+void loop()
+{
+	// Toggle time set mode.
+	if (digitalRead(hoursBtnPin) == LOW && hoursButtonDown)
+	{
+		if ((millis() - buttonTimer) >= longPressTime)
+			longPressActive = !longPressTime;
 
-  /*
-  hoursBtnState = digitalRead(hoursBtnPin);
-  minutesBtnState = digitalRead(minutesBtnPin);
-  */
-  
-  // Calculate time from program start and add given offset.
-  hours = (((millis() / 1000) / 360) + hourOffset) % 12;
-  minutes = (((millis() / 1000) / 60) + minuteOffset) % 60;
+		hoursButtonDown = false;
+	}
+	else if (digitalRead(hoursBtnPin) == HIGH && hoursButtonDown)
+	{
+		buttonTimer = millis();
+		hoursButtonDown = true;
+	}
 
-  // Set output pins for minutes.
-  for (int i = 0; i < 4; i++) {
-    digitalWrite(i + 5, (bitRead(hours, i) ? HIGH : LOW));
-    
-    Serial.print("Pin number: ");
-    Serial.print(i + 5);
-    Serial.print(" Bit: ");
-    Serial.print(bitRead(hours, i));
-    Serial.println("");
-  }
+	// Set hours.
+	if (digitalRead(hoursBtnPin) == HIGH && longPressActive && !hourUpdated)
+	{
+		hourOffset++;
+		hourUpdated = true;
+	}
 
-  Serial.println("\n");
+	if (digitalRead(hoursBtnPin) == LOW){
+		hourUpdated = false;
+		hoursButtonDown = false;
+	}
 
-  // Set output pins for minutes.
-  for (int i = 0; i < 6; i++) {
-    digitalWrite(i + 9, (bitRead(minutes, i) ? HIGH : LOW));
+	// Set minutes.
+	if (digitalRead(minutesBtnPin) == HIGH && longPressActive && !minuteUpdated)
+	{
+		minuteOffset++;
+		minuteUpdated = true;
+	}
 
-    Serial.print("Pin number: ");
-    Serial.print(i + 9);
-    Serial.print(" Bit: ");
-    Serial.print(bitRead(minutes, i));
-    Serial.println("");
-  }
+	if (digitalRead(minutesBtnPin) == LOW)
+		minuteUpdated = false;
 
-  Serial.println("------------------------");
+	// Calculate time from program start and add given offset.
+	hours = ((millis() / 360000) + hourOffset) % 12;
+	minutes = ((millis() / 60000) + minuteOffset) % 60;
 
-  // Sleep for 1 minute.
-  delay(DELAY);
+	// Set output pins for minutes.
+	for (int i = 0; i < 4; i++)
+		digitalWrite(i + 2, (bitRead(hours, i) ? HIGH : LOW));
+
+	// Set output pins for minutes.
+	for (int i = 0; i < 6; i++)
+		digitalWrite(i + 6, (bitRead(minutes, i) ? HIGH : LOW));
+
+	// Sleep until next update.
+	delay(DELAY);
 }
