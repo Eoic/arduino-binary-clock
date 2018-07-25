@@ -1,6 +1,3 @@
-// Delay after time update.
-const short DELAY = 0;
-
 // Buttons.
 const byte hoursBtnPin = 12;
 const byte minutesBtnPin = 13;
@@ -17,6 +14,8 @@ boolean hoursButtonDown = false;
 
 boolean hourUpdated = false;
 boolean minuteUpdated = false;
+
+boolean longPressIssued = false;
 
 // Time.
 byte hourOffset, minuteOffset;
@@ -45,53 +44,60 @@ void setup()
 void loop()
 {
 	// Toggle time set mode.
-	if (digitalRead(hoursBtnPin) == LOW && hoursButtonDown)
+	if (digitalRead(hoursBtnPin) == HIGH)
 	{
-		if ((millis() - buttonTimer) >= longPressTime)
-			longPressActive = !longPressTime;
+    // Set button as pressed down and save timestamp.
+    if(!hoursButtonDown){
+  	  hoursButtonDown = true;
+  	  buttonTimer = millis();
+    } 
+    
+    if((millis() - buttonTimer) >= longPressTime && !longPressIssued) {
+      longPressActive = !longPressActive;
+      longPressIssued = true;
 
-		hoursButtonDown = false;
-	}
-	else if (digitalRead(hoursBtnPin) == HIGH && hoursButtonDown)
-	{
-		buttonTimer = millis();
-		hoursButtonDown = true;
+      if(!longPressActive)
+        hourOffset--;
+    } 
+    
+    if(longPressActive && !hourUpdated && !longPressIssued){
+        hourOffset++;
+        hourUpdated = true;
+    } 
+
+    delay(50);
 	}
 
-	// Set hours.
-	if (digitalRead(hoursBtnPin) == HIGH && longPressActive && !hourUpdated)
-	{
-		hourOffset++;
-		hourUpdated = true;
-	}
-
-	if (digitalRead(hoursBtnPin) == LOW){
-		hourUpdated = false;
-		hoursButtonDown = false;
-	}
+  if(digitalRead(hoursBtnPin) == LOW && hoursButtonDown){
+    hoursButtonDown = false;
+    hourUpdated = false;
+    longPressIssued = false;
+  }
 
 	// Set minutes.
 	if (digitalRead(minutesBtnPin) == HIGH && longPressActive && !minuteUpdated)
 	{
 		minuteOffset++;
 		minuteUpdated = true;
+
+    delay(50);
 	}
 
-	if (digitalRead(minutesBtnPin) == LOW)
+	if (digitalRead(minutesBtnPin) == LOW){
 		minuteUpdated = false;
 
+    delay(50);
+	}
+
 	// Calculate time from program start and add given offset.
-	hours = ((millis() / 360000) + hourOffset) % 12;
+	hours = ((millis() / 3600000) + hourOffset) % 12;
 	minutes = ((millis() / 60000) + minuteOffset) % 60;
 
-	// Set output pins for minutes.
+	// Set output pins for hours.
 	for (int i = 0; i < 4; i++)
-		digitalWrite(i + 2, (bitRead(hours, i) ? HIGH : LOW));
+		digitalWrite(5 - i, (bitRead(hours, i) ? HIGH : LOW));
 
 	// Set output pins for minutes.
 	for (int i = 0; i < 6; i++)
-		digitalWrite(i + 6, (bitRead(minutes, i) ? HIGH : LOW));
-
-	// Sleep until next update.
-	delay(DELAY);
+		digitalWrite(11 - i, (bitRead(minutes, i) ? HIGH : LOW));
 }
