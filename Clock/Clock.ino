@@ -5,6 +5,9 @@ const byte minutesBtnPin = 13;
 // Timestamp for button down start.
 long buttonTimer = 0;
 
+// Total time in ms.
+long time = 0;
+
 // Time until button long press is registered.
 long longPressTime = 1000;
 
@@ -57,11 +60,11 @@ void loop()
       longPressIssued = true;
 
       if(!longPressActive)
-        hourOffset--;
+        hourOffset = (hourOffset - 1) % 12;
     } 
     
     if(longPressActive && !hourUpdated && !longPressIssued){
-        hourOffset++;
+        hourOffset = (hourOffset + 1) % 12;
         hourUpdated = true;
     } 
 
@@ -89,9 +92,12 @@ void loop()
     delay(50);
 	}
 
+  // Total time in ms.
+  time = millis() + (hourOffset * 3600000) + (minuteOffset * 60000);
+  
 	// Calculate time from program start and add given offset.
-	hours = ((millis() / 3600000) + hourOffset) % 12;
-	minutes = ((millis() / 60000) + minuteOffset) % 60;
+  minutes = (time / 60000) % 60;
+	hours = (time / 3600000) % 12;
 
 	// Set output pins for hours.
 	for (int i = 0; i < 4; i++)
