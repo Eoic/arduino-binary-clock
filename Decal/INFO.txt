@@ -1,0 +1,4 @@
+Height:	14.6 cm
+Width: 	13.6 cm
+
++= 0.5 mm.
